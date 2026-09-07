@@ -636,7 +636,7 @@ nav.tabbar a.on .ic{transform:scale(1.05)}
 .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:60;display:none;align-items:center;justify-content:center;padding:24px}
 .modal-mask.show{display:flex;animation:fade .15s ease}
 .modal{position:relative;max-height:calc(100dvh - 48px);overflow:auto;background:#fff;border:1px solid var(--line);border-radius:var(--r);width:100%;max-width:380px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.08)}
-.modal h4{margin:0 0 14px;font-size:16px;font-weight:700;position:relative;padding-right:28px}.modal-close{position:absolute;right:0;top:50%;transform:translateY(-50%);width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:20px;line-height:1;color:var(--text-3);cursor:pointer;user-select:none}.modal-close:hover{background:var(--card-soft);color:var(--text)}
+.search-results{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow:auto}.search-result{text-align:left;padding:10px;border:1px solid var(--line);border-radius:var(--r-sm);background:#fff;cursor:pointer}.search-result b{display:block;font-size:11px;color:var(--text-3);margin-bottom:3px}.search-result span{font-size:13px;color:var(--text)}.modal h4{margin:0 0 14px;font-size:16px;font-weight:700;position:relative;padding-right:28px}.modal-close{position:absolute;right:0;top:50%;transform:translateY(-50%);width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:20px;line-height:1;color:var(--text-3);cursor:pointer;user-select:none}.modal-close:hover{background:var(--card-soft);color:var(--text)}
 .modal .field{margin-bottom:12px}
 .modal .btns{display:flex;gap:10px;margin-top:6px}
 .modal .btns button{flex:1;padding:11px;border-radius:var(--r-sm);font-weight:600;transition:transform .12s}
@@ -983,7 +983,7 @@ summary::-webkit-details-marker{color:var(--text)}
         <div class="sub" id="hSub"></div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex:none;padding-top:2px">
-        <span class="test-build-badge" title="测试版：独立库 · 不连接云同步 · 不与正式库数据互通">测试版</span>
+        <button class="refresh-btn" id="globalSearchBtn" title="全局查找" aria-label="全局查找">⌕</button><span class="test-build-badge" title="测试版：独立库 · 不连接云同步 · 不与正式库数据互通">测试版</span>
         <button class="refresh-btn" id="refreshBtn" title="刷新页面">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </button>
@@ -3788,7 +3788,7 @@ const dateAdd=(ds,n)=>{const d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n)
 
 /* ============ 升级功能清单 ============ */
 const CHANGELOG=[
-  {version:'v3.22.0-test',date:'2026-09-07',modules:['数据安全','同步','界面精简'],status:'测试中',items:['测试云同步状态固定为禁用，并从网络层阻止同步请求','移除学习资料整理工具，保留学习记录与全部数据导出','测试镜像独立隔离；恢复前备份与损坏数据保护','记录修改、删除和清空同步；并发冲突保留双方','新增测试验收入口，使用虚构数据验证，不连接真实云端']},
+  {version:'v3.23.0-test',date:'2026-09-07',modules:['数据安全','同步','界面精简'],status:'测试中',items:['测试云同步状态固定为禁用，并从网络层阻止同步请求','移除学习资料整理工具，保留学习记录与全部数据导出','新增全局查找（Ctrl/Cmd+K）与结果跳转','测试镜像独立隔离；恢复前备份与损坏数据保护','记录修改、删除和清空同步；并发冲突保留双方','新增测试验收入口，使用虚构数据验证，不连接真实云端']},
   {version:'v3.21.3-test',date:'2026-08-31',modules:['账本'],status:'已优化',items:[
     '账本三视图切换栏恢复吸顶，并动态跟随实际页头高度，避免与页头重叠',
     '账本模块定位自动预留页头和切换栏高度，侧栏跳转与快捷记账不会遮住模块标题和内容'
@@ -7258,6 +7258,16 @@ _todayJump('#todayGoMoney',()=>{setMoneyView('entry');goTab('money',{scrollTo:'#
 _todayJump('#todayGoLearning',()=>goTab('learning'));
 /* Startup mirror writes are gated by initializeReliability. */
 
+/* v3.23 phase 2: global search and quick navigation */
+function globalSearch(){
+ modal('<h4>全局查找<span class="modal-close" onclick="closeModal()">×</span></h4><input id="globalSearchInput" class="sync-input" placeholder="搜索待办、日志、备忘、学习内容…" autofocus><div id="globalSearchResults" class="search-results"><p class="muted">输入关键词开始查找</p></div>',{noMaskClose:false});
+ const input=$('#globalSearchInput'),box=$('#globalSearchResults');
+ const rows=[];const add=(type,items,text,go)=>items.forEach(x=>{const v=String(text(x)||'');if(v)rows.push({type,v,go});});
+ add('待办',S.todos,x=>x.text,()=>goTab('today',{scrollTo:'[data-module="todos"]'}));add('工作日志',S.worklog,x=>x.text,()=>goTab('today',{scrollTo:'[data-module="worklog"]'}));add('备忘',S.notes,x=>(x.title||'')+' '+(x.content||''),()=>goTab('notes'));add('学习',S.learning?.contents||[],x=>(x.name||'')+' '+(x.note||''),()=>goTab('learning'));add('问题',S.learning?.questions||[],x=>(x.title||'')+' '+(x.answer||''),()=>goTab('learning'));
+ const render=()=>{const q=input.value.trim().toLowerCase();const hit=q?rows.filter(x=>x.v.toLowerCase().includes(q)).slice(0,30):[];box.innerHTML=hit.length?hit.map((x,i)=>`<button class="search-result" data-i="${i}"><b>${esc(x.type)}</b><span>${esc(x.v.slice(0,100))}</span></button>`).join(''):(q?'<p class="muted">没有找到匹配内容</p>':'<p class="muted">输入关键词开始查找</p>');box.querySelectorAll('.search-result').forEach((b,i)=>b.onclick=()=>{closeModal();hit[i].go();});};
+ input.oninput=render;input.onkeydown=e=>{if(e.key==='Escape')closeModal();};
+}
+$('#globalSearchBtn').onclick=globalSearch;document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();globalSearch();}});
 /* ============ 全局渲染 ============ */
 function initFilters(){
   const[mf,mt]=rangeOf('thisMonth');setFlowRange(mf,mt,'thisMonth');
