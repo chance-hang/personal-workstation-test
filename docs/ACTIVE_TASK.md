@@ -2,46 +2,35 @@
 
 ## 当前状态
 
-Waiting for Prod execution
+Waiting for Prod Human Acceptance
 
 ## 当前目标
 
-继续“个人工作台 Test → Prod 发布架构”阶段 B：
+“个人工作台 Test → Prod 发布架构”阶段 B 的 Prod 三文件结构拆分已经完成、通过 ChatGPT Review，并已合并到正式库 `main`。
 
-**Prod 单文件结构机械拆分**
+当前不执行新的 Test 代码任务，等待 Prod 浏览器人工验收。
 
-## 执行入口已调整
-
-由于本机 Codex 对父目录多仓库 Workspace 初始化不稳定，阶段 B 不再要求在同一个 Workspace 同时打开 Test 与 Prod。
-
-现在采用：
+## 当前架构
 
 - Test Workspace：独立打开 `personal-workstation-test`
 - Prod Workspace：独立打开 `personal-workstation-prod`
-- Prod 本地 Git 配置 `test` remote 指向 `hb27bp49vk-source/personal-workstation-test`
-
-阶段 B 的实际执行任务已经放到正式仓库：
-
-`hb27bp49vk-source/personal-workstation/docs/ACTIVE_TASK.md`
+- Prod 本地 `origin` → `hb27bp49vk-source/personal-workstation`
+- Prod 本地 `test` → `hb27bp49vk-source/personal-workstation-test`
 
 ## 当前要求
-
-Test 仓库本轮不再执行任何业务修改。
 
 Codex 如果在 Test Workspace 读取本文件：
 
 - 不创建新分支
 - 不修改 Test 业务代码
-- 不继续执行旧版阶段 B 指令
+- 不执行 Test → Prod 发布
 - 保持 Test `main` 稳定
 
-正式结构拆分请切换到 Prod Workspace，并读取 Prod 仓库自己的：
+## 下一步
 
-- `AGENTS.md`
-- `docs/ACTIVE_TASK.md`
+Prod 人工验收通过后，由 ChatGPT 进入阶段 C：
 
-## 长期工作流方向
-
-后续采用：
-
-Test 开发 → ChatGPT Review → 人工验收 → 标记 Release Ready → Prod Workspace 通过 `test` remote 获取指定 Test 版本 → 执行受控发布。
+- 固化 Test → Prod 发布清单
+- 明确 Release Ready 状态
+- 固化 Prod 通过 `test` remote 获取指定 Test commit 的发布方式
+- 建立发布历史记录
