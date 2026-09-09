@@ -2,7 +2,7 @@
 
 ## 状态
 
-Active
+Completed
 
 ## 背景
 
@@ -11,127 +11,106 @@ Active
 - Test：`hb27bp49vk-source/personal-workstation-test`
 - Prod：`hb27bp49vk-source/personal-workstation`
 
-Test 已完成第一阶段结构拆分，当前为：
+本计划用于把原先彼此独立、结构不一致的 Test / Prod，改造成可重复执行的开发与发布体系。
+
+## 已完成结果
+
+### 1. Test / Prod 差异审计
+
+已完成正式版与测试版的结构、登录、localStorage、IndexedDB、Gist、导入导出和初始化差异审计。
+
+结论：环境差异不能通过无脑覆盖处理，正式版行为必须在发布时被显式保护。
+
+### 2. Prod 三文件结构迁移
+
+Prod 已从单文件 `index.html` 机械拆分为：
 
 - `index.html`
 - `styles.css`
 - `app.js`
 
-Prod 当前仍为单文件 `index.html`，且历史上存在正式环境专属行为，例如正式版刷新后的登录提示。
+结构拆分没有同步 Test 新功能，已通过 ChatGPT Review，并完成用户人工验收。
 
-因此不能直接把 Test 的三个文件无脑覆盖到 Prod。需要先识别 Test / Prod 的真实差异，再把“环境差异”从“业务代码差异”里抽出来，最终建立可重复的 Test → Prod 发布流程。
+关键结构迁移提交：
 
-## 总目标
+`2361b340527e186b210fbb549ba7a465ff2b5dd6`
 
-建立以下长期规则：
+### 3. 独立 Workspace + Git remote 架构
 
-1. 常规功能开发只在 Test 仓库进行。
-2. Test 完成 ChatGPT Review 和人工验收后，才允许发布到 Prod。
-3. Prod 不重新实现功能，只接收 Test 已验证版本。
-4. 尽量让 Test / Prod 共享同一套业务代码。
-5. 环境差异使用独立配置表达，避免 Test / Prod 长期分叉。
-6. 发布过程必须可审查、可停止、可回滚。
+由于本机 Codex 对父目录多仓库 Workspace 初始化不稳定，最终采用四个独立 Git Workspace。
 
-## 目标结构
+个人工作台：
 
-长期目标优先考虑：
+- Test Workspace：`personal-workstation-test`
+- Prod Workspace：`personal-workstation-prod`
 
-```text
-index.html
-styles.css
-app.js
-env.js
-```
+Prod 本地 Git 约定：
 
-其中：
+- `origin` → `hb27bp49vk-source/personal-workstation`
+- `test` → `hb27bp49vk-source/personal-workstation-test`
 
-- `index.html` / `styles.css` / `app.js`：尽量 Test / Prod 相同。
-- `env.js`：只保存环境差异，不跨环境直接覆盖。
+Prod 通过 `git fetch test` 获取经过验收的 Test commit，不依赖跨目录 Workspace。
 
-如果实际代码分析表明 `env.js` 不是最安全方式，可以调整命名或实现，但必须保持“共享业务代码 + 独立环境配置”的原则。
+### 4. Test → Prod 发布协议
 
-## 阶段 A — 差异审计与方案落地
+Test 负责：
 
-### 目标
+用户需求 → ChatGPT Plan / ACTIVE_TASK → Codex 开发 → push → ChatGPT Review → 用户人工验收 → `docs/RELEASE.md` 标记 `Release Ready`。
 
-先在 Test 仓库中完成 Test / Prod 差异审计和发布方案设计，不修改 Prod 仓库业务代码。
+Prod 负责：
 
-### 必须检查
+读取自己的 `AGENTS.md`、`docs/ACTIVE_TASK.md`、`docs/RELEASE.md` → `git fetch test` → 获取指定 Source Test commit → 在独立发布分支中做受控同步 → push → ChatGPT Review → 合并 → 用户人工验收。
 
-1. Test 当前 `index.html` / `styles.css` / `app.js` 与 Prod 单文件 `index.html` 的对应关系。
-2. Prod 中是否存在 Test 没有的正式环境专属逻辑。
-3. 重点检查：
-   - 刷新后的 Chance 登录提示
-   - 登录默认行为
-   - localStorage 相关逻辑
-   - Gist 加密同步
-   - 数据导入 / 导出
-   - 页面初始化顺序
-   - 任何正式版专属文案或保护逻辑
-4. 判断哪些差异属于：
-   - 已过时的历史差异
-   - 应继续保留的生产环境差异
-   - 可以抽取到环境配置的差异
-5. 给出最终迁移方案和明确文件边界。
+禁止：
 
-### 本阶段允许
+- 直接 `git merge test/main`
+- 整库覆盖 Prod
+- 在 Prod 独立重新实现 Test 已完成的需求
+- 无视 Prod 正式环境行为进行文件覆盖
 
-- 在 Test 仓库增加/更新文档。
-- 如确认安全，可在 Test 分支中引入最小环境配置层并验证 Test 行为不变。
-- 可以新增 `env.js`，但只能在方案明确且不破坏现有浏览器直接运行前提下进行。
+### 5. 发布历史
 
-### 本阶段禁止
+Prod 已建立：
 
-- 不修改 `personal-workstation` 正式仓库。
-- 不把 Test 文件复制到 Prod。
-- 不发布任何正式版本。
-- 不改变 localStorage 核心字段。
-- 不改变 GitHub Gist 加密同步协议。
-- 不重新拆分 `app.js`。
-- 不引入 npm / 构建工具 / 框架。
-- 不顺便重构无关业务代码。
+`docs/RELEASE_HISTORY.md`
 
-### 验证
-
-至少验证：
-
-- Test 仍能浏览器直接运行。
-- 现有主要页面、登录、数据保存和 Gist 同步路径不因环境配置改造而失效。
-- 如果新增 `env.js`，Test 缺省环境和加载顺序清晰。
-- 对 Prod 专属行为的保留方式有明确说明。
-
-## 阶段 B — Prod 结构迁移
-
-依赖：阶段 A Review 通过并人工确认。
-
-目标：把 Prod 从单文件结构迁移到与 Test 一致的共享业务结构，同时保留正式环境专属行为。
-
-阶段 B 开始前必须重新生成 ACTIVE_TASK，并明确 Prod 迁移步骤、备份点和回滚点。
-
-## 阶段 C — 发布流程固化
-
-依赖：阶段 B 验证通过。
-
-目标：建立稳定的 Test → Prod 发布清单，包括：
+用于记录每次正式发布的：
 
 - Source Test commit
-- Target Prod repo
-- 可同步文件
-- 禁止覆盖文件
-- 环境配置保留项
-- 发布前检查
-- 发布后验证
-- 回滚方式
+- Prod 发布提交
+- 发布范围
+- 验收结果
+- 回滚信息
 
-最终由 `docs/RELEASE.md` 记录当前待发布状态。
+## 长期规则
+
+1. 常规开发只在 Test。
+2. Prod 只作为正式发布区。
+3. Test 通过 ChatGPT Review 和人工验收后才可成为发布候选。
+4. 每次发布必须有明确 Source Test commit 与允许修改范围。
+5. Prod 环境差异必须被显式保护。
+6. 发布必须经过独立发布分支、ChatGPT Review 和人工验收。
+7. GitHub 是两台电脑和多个 Workspace 之间的共享状态来源。
+
+## 关于 env.js
+
+本计划最初考虑使用 `env.js` 统一环境差异。
+
+经过差异审计后，决定不把 `env.js` 作为本轮架构完成的强制条件。当前先通过明确的发布清单和 Prod 行为保护规则管理环境差异。
+
+如果以后 Test / Prod 业务代码继续趋同、且实际发布成本证明有必要，可单独立项做最小环境配置层；不得与普通功能发布顺便混做。
 
 ## 完成标准
 
-当以下条件全部满足时，本计划完成：
+本计划已完成：
 
-1. Test / Prod 业务结构基本一致。
-2. 环境差异被明确隔离。
-3. Test 是唯一常规开发入口。
-4. Prod 不再直接重新实现功能。
-5. 有清晰的 Release 文档和执行步骤。
-6. 至少完成一次 Test → Prod 的受控发布验证。
+- Test / Prod 结构差异已审计
+- Prod 三文件结构迁移并人工验收通过
+- Test / Prod 独立 Workspace 方案确定
+- Prod `test` remote 方案确定并验证
+- Test Release 清单规则建立
+- Prod Release 执行规则建立
+- Prod 发布历史建立
+- Test 与 Prod 日常职责边界明确
+
+后续不再继续本 Plan。新的产品需求使用新的 Plan；新的 Test → Prod 发布由当次 `docs/RELEASE.md` 和 Prod `docs/ACTIVE_TASK.md` 驱动。
