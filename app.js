@@ -2675,12 +2675,13 @@ const DEFAULT={
   budgetCats:{},
   quickNotes:[],
   learning:{directions:[],contents:[],plans:[],questions:[],reviews:[],mistakes:[],selftests:[]},
-  habitArchive:{}
+  habitArchive:{},
+  checkinBreakNotes:{}
 };
 /* Pure sync logic, embedded in the test page. */
 const Reliability=(()=>{
  const arrays=['todos','habits','ledger','notes','countdowns','worklog',...['directions','contents','plans','questions','reviews','mistakes','selftests'].map(k=>'learning.'+k)];
- const maps=['moods','budgetCats','habitArchive'],copy=x=>structuredClone(x),obj=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
+ const maps=['moods','budgetCats','habitArchive','checkinBreakNotes'],copy=x=>structuredClone(x),obj=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
  const stable=x=>JSON.stringify(x,(k,v)=>obj(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v),get=(s,p)=>p.split('.').reduce((v,k)=>v&&v[k],s);
  function validate(d){
   if(!obj(d)||!['todos','ledger','notes','worklog','learning','habits','moods'].some(k=>k in d))throw Error('不是工作台备份');
@@ -4082,15 +4083,48 @@ function renderCheckinSegments(stats){
   const list=stats.segments.map(segment=>{
     const range=segment.startDate===segment.endDate?segment.startDate:`${segment.startDate} ～ ${segment.endDate}`;
     const current=segment===latest&&stats.currentStreakDays>0;
-    const breaks=segment.breakDates.length?`<div class="checkin-break"><b>断签 ${segment.breakDates.length} 天</b><br>${segment.breakDates.join('、')}</div>`:'';
+    const breaks=segment.breakDates.length?`<div class="checkin-break"><b>断签 ${segment.breakDates.length} 天</b><br>${segment.breakDates.map(ds=>`<button class="checkin-break-date ${(S.checkinBreakNotes||{})[ds]?'has-note':''}" data-ds="${ds}">${ds}${(S.checkinBreakNotes||{})[ds]?' · 有备注':''}</button>`).join('')}</div>`:'';
     return `<div class="checkin-segment"><div class="checkin-segment-top"><b>${current?'当前连续':'连续记录'}</b><span class="days">连续 ${segment.days} 天</span></div><div class="range">${range}</div>${breaks}</div>`;
   }).join('');
   box.innerHTML=`<div class="checkin-history"><div class="checkin-history-head"><b>连续打卡记录</b><span>${stats.segments.length} 段 · 断签 ${stats.breakDays} 天</span></div><div class="checkin-segments">${list}</div></div>`;
 }
+function checkinDateStatus(ds,stats){
+  if(ds>todayStr())return 'future';
+  if(stats.dates.includes(ds))return 'checked';
+  if(stats.breakDates.includes(ds))return 'break';
+  return 'empty';
+}
+function renderCheckinMap(stats){
+  const box=$('#checkinMap');if(!box)return;
+  const weeks=26,end=new Date();end.setHours(0,0,0,0);
+  const start=new Date(end);start.setDate(end.getDate()-(weeks*7-1-(6-(6-end.getDay()))));
+  let days='';
+  for(let w=0;w<weeks;w++)for(let d=0;d<7;d++){
+    const cur=new Date(start);cur.setDate(start.getDate()+w*7+d);const ds=fmtDate(cur),status=checkinDateStatus(ds,stats);
+    const note=(S.checkinBreakNotes||{})[ds];
+    days+=`<button class="checkin-map-day ${status}" data-ds="${ds}" title="${ds} · ${status==='checked'?'已打卡':status==='break'?'断签':status==='future'?'未来日期':'无打卡'}${note?' · '+esc(note):''}" aria-label="${ds}"></button>`;
+  }
+  box.innerHTML=`<div class="checkin-map-wrap"><div class="checkin-history-head"><b>打卡记录图</b><span>近 26 周 · 点日期查看</span></div><div class="heat-wrap"><div class="checkin-map">${days}</div></div><div class="checkin-map-leg"><span><i class="checked"></i>打卡</span><span><i class="break"></i>断签</span><span><i class="empty"></i>无数据</span><span><i class="future"></i>未来</span></div></div>`;
+  $$('#checkinMap .checkin-map-day').forEach(b=>b.onclick=()=>openCheckinDateDetail(b.dataset.ds));
+}
+function openCheckinDateDetail(ds){
+  const stats=habitCheckinHistoryStats(S.habits,S.habitArchive),status=checkinDateStatus(ds,stats),isBreak=status==='break';
+  S.checkinBreakNotes=S.checkinBreakNotes||{};const note=S.checkinBreakNotes[ds]||'';
+  const label=status==='checked'?'当天有习惯打卡':isBreak?'当天为断签日':status==='future'?'未来日期':'当天没有习惯打卡';
+  const noteField=isBreak?`<div class="field" style="align-items:flex-start"><span class="lab" style="margin-top:8px">断签备注</span><textarea id="checkinBreakNote" placeholder="例如：出差、休息或临时安排" style="flex:1;min-height:72px">${esc(note)}</textarea></div>`:'';
+  const makeup=status!=='future'?'<button class="cancel" id="checkinMakeup">查看/补打卡</button>':'';
+  modal(`<h4>打卡详情<span class="modal-close" onclick="closeModal()">×</span></h4><div class="muted" style="margin-bottom:12px">${ds} · ${label}</div>${noteField}<div class="btns">${makeup}${isBreak?'<button class="cancel" id="checkinBreakDelete">删除备注</button><button class="ok" id="checkinBreakSave">保存备注</button>':'<button class="ok" onclick="closeModal()">关闭</button>'}</div>`,{noMaskClose:true});
+  const makeupBtn=$('#checkinMakeup');if(makeupBtn)makeupBtn.onclick=()=>{closeModal();openMakeupModal(ds)};
+  if(isBreak){
+    $('#checkinBreakSave').onclick=()=>{const value=$('#checkinBreakNote').value.trim();if(value)S.checkinBreakNotes[ds]=value;else delete S.checkinBreakNotes[ds];persist();closeModal();renderCheckins();toast('断签备注已保存')};
+    $('#checkinBreakDelete').onclick=()=>{delete S.checkinBreakNotes[ds];persist();closeModal();renderCheckins();toast('断签备注已删除')};
+  }
+}
 function renderCheckins(){
   const feed=$('#checkinFeed');if(!feed)return;
   const stats=habitCheckinHistoryStats(S.habits,S.habitArchive);
-  renderCheckinOverview(stats);renderCheckinSegments(stats);
+  renderCheckinOverview(stats);renderCheckinSegments(stats);renderCheckinMap(stats);
+  $$('#checkinSegments .checkin-break-date').forEach(b=>b.onclick=()=>openCheckinDateDetail(b.dataset.ds));
   const byDate={};
   const add=(ds,item)=>{(byDate[ds]=byDate[ds]||[]).push(item)};
   Object.keys(S.moods||{}).forEach(ds=>{ const m=MOODS.find(x=>x.k===S.moods[ds]); if(m) add(ds,{type:'mood',name:m.name,color:m.c,svg:m.svg}); });
