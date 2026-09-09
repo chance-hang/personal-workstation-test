@@ -6,147 +6,193 @@ Active
 
 ## 当前目标
 
-执行“个人工作台 Test → Prod 发布架构”阶段 A：
+执行“个人工作台 Test → Prod 发布架构”阶段 B：
 
-**差异审计 + 环境配置方案落地**
+**Prod 单文件结构机械拆分**
 
 ## 对应 Plan
 
 `docs/plans/2026-09-09-test-prod-release-architecture.md`
 
-## 当前分支
+## 当前工作区
 
-`codex/test-prod-release-audit`
+本机 Codex Workspace：`personal-workstation`
 
-## 当前仓库
+其中：
 
-`hb27bp49vk-source/personal-workstation-test`
+- Test：`personal-workstation-test`
+- Prod：`personal-workstation-prod`
 
-## 对应正式仓库
+## 当前任务分支
 
-`hb27bp49vk-source/personal-workstation`
+在 Prod 仓库创建：
+
+`codex/prod-split-single-file`
 
 ## 本轮目标
 
-先确认 Test / Prod 的真实代码差异，特别是正式环境专属行为，再决定如何把环境差异从业务代码中隔离出来。
-
-本轮仍以 Test 仓库为工作区，不修改正式仓库。
-
-## 开始前
-
-1. 读取 `AGENTS.md`。
-2. 读取本文件。
-3. 完整读取对应 Plan 的“阶段 A”。
-4. `git fetch`。
-5. 确认当前仓库是 `personal-workstation-test`。
-6. 同步最新 `main`。
-7. 从最新 `main` 创建/切换到 `codex/test-prod-release-audit`。
-8. 如果工作区不干净，停止并汇报，不自动清理。
-
-## 本轮只做
-
-### A1. Test / Prod 差异审计
-
-允许读取 GitHub 上的正式仓库 `hb27bp49vk-source/personal-workstation` 进行对比，但禁止向正式仓库写入。
-
-重点确认：
-
-- Prod 单文件 `index.html` 中哪些 CSS / JS 对应 Test 当前 `styles.css` / `app.js`。
-- 正式版是否存在 Test 没有的专属登录逻辑。
-- 刷新后的 Chance 登录提示与默认登录行为。
-- localStorage 数据结构和关键字段是否一致。
-- GitHub Gist 加密同步路径是否一致。
-- 导出 / 导入行为是否一致。
-- 页面初始化顺序是否存在差异。
-- 是否存在正式版独有文案、开关或保护逻辑。
-
-把差异分类为：
-
-1. 应继续保留的生产环境差异。
-2. 已过时、无需保留的历史差异。
-3. 可抽取成环境配置的差异。
-4. 暂时无法安全判断的差异。
-
-### A2. 环境配置方案
-
-如果审计结果支持安全落地，可在当前 Test 分支中新增最小 `env.js` 或等价环境配置层。
-
-目标是让：
+把 Prod 当前单文件 `index.html` 机械拆分成：
 
 - `index.html`
 - `styles.css`
 - `app.js`
 
-以后尽量可以作为 Test / Prod 共享业务代码；环境差异由独立配置承载。
+核心原则：
 
-如果实际代码不适合 `env.js`，不要硬做，先把替代方案写清楚并停止在文档阶段。
+**只改变文件组织，不改变正式版业务行为。**
 
-### A3. 文档回写
+本阶段不是 Test → Prod 功能发布，不把 Test 当前业务代码覆盖到 Prod。
 
-在当前分支增加一份差异审计结果文档：
+## 开始前
 
-`docs/test-prod-diff-audit.md`
+1. 读取：
+   - `personal-workstation-test/AGENTS.md`
+   - `personal-workstation-test/docs/ACTIVE_TASK.md`
+   - `personal-workstation-test/docs/plans/2026-09-09-test-prod-release-architecture.md`
+   - `personal-workstation-test/docs/test-prod-diff-audit.md`
+2. 检查 Test 与 Prod 两个仓库的 Git 状态。
+3. 两边都执行 `git fetch`。
+4. 确认 Test `main` 已同步最新 GitHub。
+5. 确认 Prod 当前 `main` 已同步最新 GitHub。
+6. 如果任一仓库存在未提交修改，停止并汇报，不自动清理。
+7. 记录 Prod 当前 `main` HEAD SHA，作为本次回滚基线。
+8. 在 Prod 最新 `main` 上创建/切换分支：`codex/prod-split-single-file`。
 
-至少记录：
+## 本轮只允许修改
 
-- Test / Prod 当前结构
-- 关键差异
-- 环境差异清单
-- 推荐迁移方案
-- Prod 迁移风险
-- 阶段 B 前置条件
+Prod 仓库：`personal-workstation-prod`
+
+允许：
+
+- 修改 `index.html`
+- 新增 `styles.css`
+- 新增 `app.js`
+
+Test 仓库本轮只读，不修改任何 Test 业务代码或文档。
+
+## 迁移方式
+
+### B1. CSS 机械拆分
+
+将 Prod `index.html` 中现有主 `<style>` 内容原样迁移到 `styles.css`。
+
+要求：
+
+- 尽量保持原顺序和原内容
+- 不重写选择器
+- 不格式化整个 CSS
+- 不顺便清理重复样式
+- `index.html` 改为正确引用 `styles.css`
+
+### B2. JavaScript 机械拆分
+
+将 Prod `index.html` 中现有主业务脚本原样迁移到 `app.js`。
+
+要求：
+
+- 保持脚本执行顺序
+- 保持 DOM 初始化时机
+- 保持正式登录行为
+- 保持 localStorage 无前缀命名空间
+- 保持现有 IndexedDB 镜像行为
+- 保持 Gist 登录 / 同步逻辑
+- 保持导入 / 导出逻辑
+- 不把 Test 的 `app.js` 覆盖到 Prod
+- 不引入 ES Module
+- 不引入构建系统
+
+### B3. HTML 收口
+
+`index.html` 最终只保留页面结构与外链资源引用。
+
+确保：
+
+- `styles.css` 正确加载
+- `app.js` 正确加载
+- 原有资源路径不变
+- 原有 DOM id / class / data 属性不变
+- 不新增 `env.js`
+
+## 必须保留的 Prod 行为
+
+本次迁移必须保持：
+
+- Prod 无前缀 localStorage
+- 正式 Gist 同步可用
+- 正式账户登录逻辑
+- 刷新后的登录提示 / 默认登录行为
+- 现有 IndexedDB 镜像与恢复路径
+- 导入 / 导出
+- 页面初始化顺序
+- 正式环境现有文案和保护逻辑
+
+## 关于敏感凭据
+
+用户已明确这是个人项目，并接受现有源码凭据风险。
+
+因此本轮：
+
+- 不轮换凭据
+- 不迁移凭据
+- 不删除凭据
+- 不把凭据复制到 Test
+- 不在汇报或文档中输出凭据内容
+- 凭据问题不阻塞本次结构迁移
 
 ## 本轮禁止
 
-- 不修改 `hb27bp49vk-source/personal-workstation` 正式仓库。
-- 不执行 Test → Prod 发布。
-- 不复制 Test 文件覆盖 Prod。
-- 不重新拆分 `app.js`。
-- 不引入 npm / 构建工具 / 框架。
-- 不改变 localStorage 核心字段。
-- 不改变 GitHub Gist 加密同步协议。
-- 不做无关 UI / 业务重构。
-- 不全局格式化。
+- 不修改 Test 业务代码
+- 不把 Test 的 `index.html` / `styles.css` / `app.js` 覆盖 Prod
+- 不同步打卡历史等新功能到 Prod
+- 不新增 `env.js`
+- 不升级 IndexedDB 实现
+- 不改变 localStorage key
+- 不改变 Gist 协议
+- 不改变登录流程
+- 不改变导入 / 导出格式
+- 不重构函数
+- 不重新拆分 `app.js`
+- 不引入 npm / Node / 框架
+- 不全局格式化
+- 不合并 Prod `main`
 
 ## 验证
 
-如果只完成审计文档：
+至少完成以下验证：
 
-- 确认文档能明确解释 Prod 专属行为和迁移风险。
-
-如果同时新增环境配置层：
-
-至少验证：
-
-1. Test 浏览器直接运行正常。
-2. 页面主要 Tab 正常。
-3. 登录行为与改造前 Test 一致。
-4. localStorage 数据可正常读取。
-5. Gist 同步路径未改变。
-6. 导入 / 导出路径未改变。
-7. 页面刷新和初始化正常。
+1. 检查拆分前后 HTML / CSS / JS 内容对应关系，确认业务脚本没有遗漏或重复。
+2. 浏览器直接打开 Prod `index.html`，确认页面可正常加载。
+3. 检查控制台没有因拆分导致的新语法错误 / 资源加载错误。
+4. 主要 Tab / 页面切换正常。
+5. 刷新后的正式登录提示 / 默认登录行为与拆分前一致。
+6. localStorage 正式数据仍能读取，不出现 `wbtest_` 前缀。
+7. IndexedDB 初始化与镜像路径没有被改动。
+8. 导入 / 导出入口正常。
+9. Gist 登录 / 同步相关代码路径未被改动；如果不适合使用真实数据验证，可做静态路径核对并明确说明未实测项。
+10. 检查 `git diff`，应主要表现为从 `index.html` 移出 CSS / JS 到两个新文件，而不是大规模业务重写。
 
 ## 完成后
 
+在 Prod 分支：
+
 1. 检查 `git diff`。
-2. commit 当前分支。
-3. 推荐提交信息：`chore: 审计 Test Prod 差异并设计环境配置`
-4. push `codex/test-prod-release-audit`。
+2. commit。
+3. 推荐提交信息：`refactor: 拆分正式版单文件结构`
+4. push `codex/prod-split-single-file` 到 GitHub。
 5. 不合并 `main`。
-6. 不修改 Prod。
-7. 停止等待 ChatGPT Review。
+6. 停止等待 ChatGPT Review。
 
 ## 汇报要求
 
-用中文汇报：
+用中文简短汇报：
 
-- 是否完成差异审计
-- 是否新增环境配置层
-- Prod 有哪些必须保留的专属差异
-- localStorage / Gist / 导入导出是否存在差异
-- 修改了哪些 Test 文件
+- Prod 回滚基线 SHA
+- 是否完成三文件拆分
+- 修改了哪些 Prod 文件
+- 是否修改任何业务逻辑
+- 正式登录 / localStorage / IndexedDB / Gist / 导入导出是否保持
 - 做了哪些验证
-- 哪些地方仍无法确定
+- 哪些项目未实际验证及原因
 - commit SHA
 - push 是否成功
 - 当前分支
