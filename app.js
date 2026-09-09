@@ -4118,8 +4118,10 @@ function openCheckinDateDetail(ds){
   const label=status==='checked'?'当天有习惯打卡':isBreak?'当天为断签日':status==='future'?'未来日期':'当天没有习惯打卡';
   const noteField=isBreak?`<div class="field" style="align-items:flex-start"><span class="lab" style="margin-top:8px">断签备注</span><textarea id="checkinBreakNote" placeholder="例如：出差、休息或临时安排" style="flex:1;min-height:72px">${esc(note)}</textarea></div>`:'';
   const makeup=status!=='future'?'<button class="cancel" id="checkinMakeup">查看/补打卡</button>':'';
-  modal(`<h4>打卡详情<span class="modal-close" onclick="closeModal()">×</span></h4><div class="muted" style="margin-bottom:12px">${ds} · ${label}</div>${noteField}<div class="btns">${makeup}${isBreak?'<button class="cancel" id="checkinBreakDelete">删除备注</button><button class="ok" id="checkinBreakSave">保存备注</button>':'<button class="ok" onclick="closeModal()">关闭</button>'}</div>`,{noMaskClose:true});
+  const mood=status!=='future'?'<button class="cancel" id="checkinMood">记录/编辑心情</button>':'';
+  modal(`<h4>打卡详情<span class="modal-close" onclick="closeModal()">×</span></h4><div class="muted" style="margin-bottom:12px">${ds} · ${label}</div>${noteField}<div class="btns">${makeup}${mood}${isBreak?'<button class="cancel" id="checkinBreakDelete">删除备注</button><button class="ok" id="checkinBreakSave">保存备注</button>':'<button class="ok" onclick="closeModal()">关闭</button>'}</div>`,{noMaskClose:true});
   const makeupBtn=$('#checkinMakeup');if(makeupBtn)makeupBtn.onclick=()=>{closeModal();openMakeupModal(ds)};
+  const moodBtn=$('#checkinMood');if(moodBtn)moodBtn.onclick=()=>openMoodMakeupModal(ds);
   if(isBreak){
     $('#checkinBreakSave').onclick=()=>{const value=$('#checkinBreakNote').value.trim();if(value)S.checkinBreakNotes[ds]=value;else delete S.checkinBreakNotes[ds];persist();closeModal();renderCheckins();toast('断签备注已保存')};
     $('#checkinBreakDelete').onclick=()=>{delete S.checkinBreakNotes[ds];persist();closeModal();renderCheckins();toast('断签备注已删除')};
@@ -4155,6 +4157,17 @@ const MOODS=[
   {k:4,name:'开心',c:'#6a5a8e',svg:'<circle cx="12" cy="12" r="9"/><path d="M8 14c1 2 3 3 4 3s3-1 4-3"/><circle cx="9" cy="9.5" r="1"/><circle cx="15" cy="9.5" r="1"/>'},
   {k:5,name:'超棒',c:'#5a7a4e',svg:'<circle cx="12" cy="12" r="9"/><path d="M8 14c1 2.5 3 3.5 4 3.5s3-1 4-3.5"/><path d="M8 8l1.5 1.5M16 8l-1.5 1.5"/>'}
 ];
+function openMoodMakeupModal(preDate){
+  const today=todayStr(),ds=preDate||today;
+  if(!isCheckinDate(ds)||ds>today){toast('不能给未来补录心情哦');return}
+  let selected=S.moods[ds]||null;
+  const paint=()=>{
+    modal(`<h4>${ds===today?'记录心情':'补录心情'}<span class="modal-close" onclick="closeModal()">×</span></h4><div class="muted" style="margin:-4px 0 12px;font-size:12px">${ds} · ${selected?'选择新的心情会覆盖当天记录':'选择当天的心情状态'}</div><div class="mood-row mood-makeup-row" id="moodMakeupRow">${MOODS.map(m=>`<button class="mood-btn ${selected===m.k?'on':''}" data-k="${m.k}"><span class="f"><svg viewBox="0 0 24 24" fill="none" stroke="${m.c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${m.svg}</svg></span>${m.name}</button>`).join('')}</div><div class="btns"><button class="cancel" onclick="closeModal()">取消</button><button class="ok" id="moodMakeupSave">保存心情</button></div>`,{noMaskClose:true});
+    $$('#moodMakeupRow .mood-btn').forEach(b=>b.onclick=()=>{selected=+b.dataset.k;paint()});
+    $('#moodMakeupSave').onclick=()=>{if(!selected){toast('请选择一种心情');return}S.moods[ds]=selected;persist();closeModal();renderMood();renderHeatmap();renderCheckins();toast(ds===today?'心情已记录':'心情已补录')};
+  };
+  paint();
+}
 function renderMood(){
   const t=todayStr();
   $('#moodRow').innerHTML=MOODS.map(m=>`<button class="mood-btn ${S.moods[t]===m.k?'on':''}" data-k="${m.k}"><span class="f"><svg viewBox="0 0 24 24" fill="none" stroke="${m.c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${m.svg}</svg></span>${m.name}</button>`).join('');
