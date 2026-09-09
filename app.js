@@ -4076,6 +4076,7 @@ function renderCheckinOverview(stats){
   const items=[['累计打卡',stats.totalDays],['当前连续',stats.currentStreakDays],['最长连续',stats.longestStreakDays],['历史断签',stats.breakCount]];
   overview.innerHTML=`<div class="checkin-overview">${items.map(([label,value])=>`<div class="checkin-stat"><span class="k">${label}</span><span class="v">${value}<span class="u">${label==='历史断签'?'次':'天'}</span></span></div>`).join('')}</div>`;
 }
+const expandedCheckinBreakSegments=new Set();
 function renderCheckinSegments(stats){
   const box=$('#checkinSegments');if(!box)return;
   if(!stats.segments.length){box.innerHTML='<div class="checkin-history"><div class="checkin-history-head"><b>连续打卡记录</b><span>暂无习惯打卡</span></div><div class="checkin-history-empty">完成一次习惯打卡后，这里会自动记录连续天数与断签日期。</div></div>';return;}
@@ -4083,7 +4084,11 @@ function renderCheckinSegments(stats){
   const list=stats.segments.map(segment=>{
     const range=segment.startDate===segment.endDate?segment.startDate:`${segment.startDate} ～ ${segment.endDate}`;
     const current=segment===latest&&stats.currentStreakDays>0;
-    const breaks=segment.breakDates.length?`<div class="checkin-break"><b>断签 ${segment.breakDates.length} 天</b><br>${segment.breakDates.map(ds=>`<button class="checkin-break-date ${(S.checkinBreakNotes||{})[ds]?'has-note':''}" data-ds="${ds}">${ds}${(S.checkinBreakNotes||{})[ds]?' · 有备注':''}</button>`).join('')}</div>`:'';
+    const segmentKey=segment.startDate;
+    const expanded=expandedCheckinBreakSegments.has(segmentKey);
+    const dates=(expanded?segment.breakDates:segment.breakDates.slice(-3)).slice().reverse();
+    const toggle=segment.breakDates.length>3?`<button class="checkin-break-toggle" data-segment="${segmentKey}">${expanded?'收起':`展开全部 ${segment.breakDates.length} 天`}</button>`:'';
+    const breaks=segment.breakDates.length?`<div class="checkin-break"><b>断签 ${segment.breakDates.length} 天</b><br>${dates.map(ds=>`<button class="checkin-break-date ${(S.checkinBreakNotes||{})[ds]?'has-note':''}" data-ds="${ds}">${ds}${(S.checkinBreakNotes||{})[ds]?' · 有备注':''}</button>`).join('')}${toggle}</div>`:'';
     return `<div class="checkin-segment"><div class="checkin-segment-top"><b>${current?'当前连续':'连续记录'}</b><span class="days">连续 ${segment.days} 天</span></div><div class="range">${range}</div>${breaks}</div>`;
   }).join('');
   box.innerHTML=`<div class="checkin-history"><div class="checkin-history-head"><b>连续打卡记录</b><span>${stats.segments.length} 段 · 断签 ${stats.breakDays} 天</span></div><div class="checkin-segments">${list}</div></div>`;
@@ -4125,6 +4130,7 @@ function renderCheckins(){
   const stats=habitCheckinHistoryStats(S.habits,S.habitArchive);
   renderCheckinOverview(stats);renderCheckinSegments(stats);renderCheckinMap(stats);
   $$('#checkinSegments .checkin-break-date').forEach(b=>b.onclick=()=>openCheckinDateDetail(b.dataset.ds));
+  $$('#checkinSegments .checkin-break-toggle').forEach(b=>b.onclick=()=>{const key=b.dataset.segment;expandedCheckinBreakSegments.has(key)?expandedCheckinBreakSegments.delete(key):expandedCheckinBreakSegments.add(key);renderCheckins()});
   const byDate={};
   const add=(ds,item)=>{(byDate[ds]=byDate[ds]||[]).push(item)};
   Object.keys(S.moods||{}).forEach(ds=>{ const m=MOODS.find(x=>x.k===S.moods[ds]); if(m) add(ds,{type:'mood',name:m.name,color:m.c,svg:m.svg}); });
