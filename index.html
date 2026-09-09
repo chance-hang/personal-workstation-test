@@ -3786,6 +3786,51 @@ const WEEK=['日','一','二','三','四','五','六'];
 const daysBetween=(a,b)=>Math.round((new Date(b)-new Date(a))/86400000);
 const dateAdd=(ds,n)=>{const d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);return fmtDate(d)};
 
+/* ============ Task 1：习惯打卡历史统计（运行时计算，不持久化 streak） ============ */
+function isCheckinDate(ds){
+  if(typeof ds!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(ds))return false;
+  const d=new Date(ds+'T00:00:00');
+  return !Number.isNaN(d.getTime())&&fmtDate(d)===ds;
+}
+function habitCheckinDates(habits=[],habitArchive={}){
+  const dates=new Set();
+  const collect=habit=>{
+    if(!habit||!habit.history||typeof habit.history!=='object')return;
+    Object.keys(habit.history).forEach(ds=>{if(habit.history[ds]&&isCheckinDate(ds))dates.add(ds)});
+  };
+  (Array.isArray(habits)?habits:[]).forEach(collect);
+  if(habitArchive&&typeof habitArchive==='object')Object.keys(habitArchive).forEach(id=>collect(habitArchive[id]));
+  return [...dates].sort();
+}
+function checkinHistoryStats(dateKeys,referenceDate=todayStr()){
+  const dates=[...new Set((dateKeys||[]).filter(isCheckinDate))].sort();
+  const segments=[];
+  for(const ds of dates){
+    const last=segments[segments.length-1];
+    if(last&&dateAdd(last.endDate,1)===ds){last.endDate=ds;last.days++;}
+    else segments.push({startDate:ds,endDate:ds,days:1,breakDates:[]});
+  }
+  const breakDates=[];
+  for(let i=0;i<segments.length-1;i++){
+    for(let ds=dateAdd(segments[i].endDate,1);ds<segments[i+1].startDate;ds=dateAdd(ds,1)){
+      segments[i].breakDates.push(ds);breakDates.push(ds);
+    }
+  }
+  const current=segments.find(s=>s.endDate===referenceDate);
+  return {
+    dates,
+    totalDays:dates.length,
+    currentStreakDays:current?current.days:0,
+    longestStreakDays:segments.reduce((max,s)=>Math.max(max,s.days),0),
+    segments,
+    breakDates,
+    breakCount:breakDates.length
+  };
+}
+function habitCheckinHistoryStats(habits,habitArchive,referenceDate=todayStr()){
+  return checkinHistoryStats(habitCheckinDates(habits,habitArchive),referenceDate);
+}
+
 /* ============ 升级功能清单 ============ */
 const CHANGELOG=[
   {version:'v3.23.0-test',date:'2026-09-07',modules:['数据安全','同步','界面精简'],status:'测试中',items:['测试云同步状态固定为禁用，并从网络层阻止同步请求','移除学习资料整理工具，保留学习记录与全部数据导出','新增全局查找（Ctrl/Cmd+K）与结果跳转','测试镜像独立隔离；恢复前备份与损坏数据保护','记录修改、删除和清空同步；并发冲突保留双方','新增测试验收入口，使用虚构数据验证，不连接真实云端']},
