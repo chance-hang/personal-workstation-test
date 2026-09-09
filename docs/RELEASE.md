@@ -18,9 +18,17 @@ Not Ready
 
 ## 当前说明
 
-当前仍处于 Test → Prod 发布架构治理阶段。
+阶段 A（Test / Prod 差异审计）已完成并通过 ChatGPT Review。
 
-在完成差异审计、环境配置隔离和 Prod 结构迁移之前，不执行正式发布。
+当前进入阶段 B：Prod 结构迁移。
+
+本阶段只把 Prod 现有单文件结构机械拆分为：
+
+- `index.html`
+- `styles.css`
+- `app.js`
+
+不把 Test 业务代码直接覆盖到 Prod，不执行功能发布，不新增 `env.js`。
 
 ## 发布原则
 
@@ -35,10 +43,12 @@ Not Ready
 
 无。
 
-## 下一步
+## 当前阶段
 
 执行：
 
 `docs/plans/2026-09-09-test-prod-release-architecture.md`
 
-阶段 A：差异审计与方案落地。
+阶段 B：Prod 结构迁移。
+
+阶段 B 完成并通过 Review / 浏览器回归后，再进入阶段 C：发布流程固化。
