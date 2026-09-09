@@ -3816,7 +3816,8 @@ function checkinHistoryStats(dateKeys,referenceDate=todayStr()){
       segments[i].breakDates.push(ds);breakDates.push(ds);
     }
   }
-  const current=segments.find(s=>s.endDate===referenceDate);
+  const lastSegment=segments[segments.length-1];
+  const current=lastSegment&&(lastSegment.endDate===referenceDate||lastSegment.endDate===dateAdd(referenceDate,-1))?lastSegment:null;
   return {
     dates,
     totalDays:dates.length,
@@ -3824,7 +3825,8 @@ function checkinHistoryStats(dateKeys,referenceDate=todayStr()){
     longestStreakDays:segments.reduce((max,s)=>Math.max(max,s.days),0),
     segments,
     breakDates,
-    breakCount:breakDates.length
+    breakDays:breakDates.length,
+    breakCount:Math.max(segments.length-1,0)
   };
 }
 function habitCheckinHistoryStats(habits,habitArchive,referenceDate=todayStr()){
