@@ -2,7 +2,11 @@
 
 ## 项目说明
 
-这是“个人工作台”的测试版。
+这是“个人工作台”的测试版，也是常规功能开发、重构、Bug 修复和验收的唯一开发入口。
+
+对应正式仓库：
+
+`hb27bp49vk-source/personal-workstation`
 
 当前应用采用浏览器直接运行、无构建步骤、无 npm / Node.js 依赖的轻量结构。
 数据主要存储于 localStorage，并支持 GitHub Gist 加密同步。
@@ -14,6 +18,29 @@
 
 项目历史上曾采用单文件 `index.html` 架构，但已完成第一阶段机械拆分。
 除非当前 `docs/ACTIVE_TASK.md` 或对应 Plan 明确授权，不要继续做新的文件拆分、模块化、框架迁移或构建系统改造。
+
+## Test → Prod 长期规则
+
+GitHub 中存在独立 Test / Prod 两个仓库。
+
+长期原则：
+
+1. 常规功能开发只在 `personal-workstation-test` 进行。
+2. Test 中的功能必须先完成 ChatGPT Review 和必要的人工验收。
+3. 只有已验证版本才能进入 Prod。
+4. 不要在 Prod 中重新实现 Test 已经完成的功能。
+5. Prod 原则上只接收 Test 已验证代码和明确的环境差异配置。
+6. 发布前读取 `docs/RELEASE.md` 和当前发布 Plan。
+7. 环境专属配置不得被跨环境无脑覆盖。
+8. 正式仓库如存在独有修改，发布前必须重新比较并停止自动覆盖。
+
+当前 Test / Prod 的结构仍在治理中。以：
+
+`docs/plans/2026-09-09-test-prod-release-architecture.md`
+
+为当前发布架构基线。
+
+在该计划明确进入 Prod 迁移阶段之前，Codex 不得修改正式仓库。
 
 ## Codex 工作原则
 
