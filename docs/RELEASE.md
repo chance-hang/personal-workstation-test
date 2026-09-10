@@ -12,11 +12,11 @@ Idle
 
 ## Source
 
-`hb27bp49vk-source/personal-workstation-test`
+`chance-hang/personal-workstation-test`
 
 ## Target
 
-`hb27bp49vk-source/personal-workstation`
+`chance-hang/personal-workstation`
 
 ## 长期发布规则
 

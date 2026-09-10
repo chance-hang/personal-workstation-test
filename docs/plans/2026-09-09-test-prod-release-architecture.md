@@ -8,8 +8,8 @@ Completed
 
 当前存在两个独立仓库：
 
-- Test：`hb27bp49vk-source/personal-workstation-test`
-- Prod：`hb27bp49vk-source/personal-workstation`
+- Test：`chance-hang/personal-workstation-test`
+- Prod：`chance-hang/personal-workstation`
 
 本计划用于把原先彼此独立、结构不一致的 Test / Prod，改造成可重复执行的开发与发布体系。
 
@@ -46,8 +46,8 @@ Prod 已从单文件 `index.html` 机械拆分为：
 
 Prod 本地 Git 约定：
 
-- `origin` → `hb27bp49vk-source/personal-workstation`
-- `test` → `hb27bp49vk-source/personal-workstation-test`
+- `origin` → `chance-hang/personal-workstation`
+- `test` → `chance-hang/personal-workstation-test`
 
 Prod 通过 `git fetch test` 获取经过验收的 Test commit，不依赖跨目录 Workspace。
 

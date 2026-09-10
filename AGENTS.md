@@ -6,7 +6,7 @@
 
 对应正式仓库：
 
-`hb27bp49vk-source/personal-workstation`
+`chance-hang/personal-workstation`
 
 当前应用采用浏览器直接运行、无构建步骤、无 npm / Node.js 依赖的轻量结构。
 数据主要存储于 localStorage，并支持 GitHub Gist 加密同步。
